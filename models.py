@@ -1,116 +1,62 @@
-import json
 import random
+import json
 
-class Loses:
-    def __init__(self, warriors: int = 0, hunters: int = 0, wizards: int = 0):
-        self.nb_warriors = warriors
-        self.nb_hunters = hunters
-        self.nb_wizards = wizards
+# --- #11 : TeamIterator ---
+class TeamIterator:
+    def __init__(self, team_members):
+        self.__team = team_members
+        self.__index = 0
 
-class Game:
-    history_file = 'game_data.json'
+    def __next__(self):
+        if self.__index < len(self.__team):
+            member = self.__team[self.__index]
+            self.__index += 1
+            return member
+        raise StopIteration
 
-    def __init__(self):
-        self.__game_status = 'not_started'
+# --- #10 : Team (Abstraite) ---
+class Team:
+    def __init__(self, members):
+        self._members = members  # Protégé
 
-    # --- Gestion du stockage ---
-    def save_game(self, player_name, context, loot, team):
-        data = {
-            'player_name': player_name,
-            'context': context,
-            'loot': loot,
-            'team': team
-        }
-        with open(self.history_file, 'w') as f:
-            json.dump(data, f, indent=4)
-        print('Partie sauvegardée dans game_data.json')
+    def __len__(self):
+        return len(self._members)
 
-    def load_game(self):
-        try:
-            with open(self.history_file, 'r') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            return None
+    def __getitem__(self, index):
+        return self._members[index]
 
-    # --- Actions de jeu ---
-    def config(self):
-        name = input("Entrez votre nom de joueur : ")
-        self.save_game(name, 'mouvement', 40, {'warrior': 0, 'hunter': 0, 'wizard': 0})
+    def __iter__(self):
+        return TeamIterator(self._members)
 
-    def start(self):
-        data = self.load_game()
-        name = data['player_name'] if data else "Joueur"
-        self.save_game(name, 'mouvement', 40, {'warrior': 0, 'hunter': 0, 'wizard': 0})
-        print("Partie réinitialisée !")
+# --- #12 : EnemyTeam ---
+class EnemyTeam(Team):
+    def __init__(self, unit_type, members):
+        super().__init__(members)
+        self.__unit = unit_type
+        self.__damage = sum(getattr(u, 'degat', 0) for u in members)
+        self.__loot = random.randint(10, 30)
 
-    def status(self):
-        data = self.load_game()
-        if not data:
-            print("Aucune partie en cours. Lancez config() ou start().")
-            return
-        
-        print(f"\n--- STATUT : {data['player_name']} ---")
-        print(f"Butin : {data['loot']} | Contexte : {data['context']}")
-        print(f"Équipe : {data['team']}")
-        
-        if data['context'] == "mouvement":
-            print("Actions possibles : buy, move")
-        else:
-            print("Actions possibles : fight, flee")
+    def get_damage(self): return self.__damage
+    def get_loot(self): return self.__loot
+    def get_unit_type(self): return self.__unit
 
-    def buy(self, unit_type):
-        data = self.load_game()
-        prices = {'warrior': 10, 'hunter': 12, 'wizard': 15}
-        
-        if data['context'] != 'mouvement':
-            print("Impossible d'acheter en plein combat !")
-            return False
+# --- #13 : PlayerTeam ---
+class PlayerTeam(Team):
+    def __init__(self, warriors=0, hunters=0, wizards=0):
+        members = (['W'] * warriors) + (['H'] * hunters) + (['Z'] * wizards)
+        super().__init__(members)
+        self.__nb_warriors = warriors
+        self.__nb_hunters = hunters
+        self.__nb_wizards = wizards
+        self.__damage = (warriors * 5) + (hunters * 4) + (wizards * 3)
+        self.__flee = (warriors * 1) + (hunters * 3) + (wizards * 5)
+        self.__luck = (hunters * 2)
 
-        if unit_type in prices and data['loot'] >= prices[unit_type]:
-            data['loot'] -= prices[unit_type]
-            data['team'][unit_type] += 1
-            self.save_game(data['player_name'], data['context'], data['loot'], data['team'])
-            print(f"Achat réussi : {unit_type}")
-            return True
-        print("Achat impossible (pas assez d'or ou unité inconnue).")
-        return False
+    def get_damage(self): return self.__damage
+    def get_flee_value(self): return self.__flee
+    def get_luck(self): return self.__luck
+    def get_counts(self):
+        return {"warriors": self.__nb_warriors, "hunters": self.__nb_hunters, "wizards": self.__nb_wizards}
 
-    def move(self):
-        data = self.load_game()
-        if data['context'] != 'mouvement': return
-        
-        print('Déplacement en cours...')
-        r = random.random()
-        if r < 0.2:
-            print("Trouvé du butin !")
-            data['loot'] += 10
-        elif r < 0.5:
-            print("COMBAT ! Une équipe ennemie surgit !")
-            data['context'] = 'combat'
-        
-        self.save_game(data['player_name'], data['context'], data['loot'], data['team'])
-        self.status()
-
-    def fight(self):
-        data = self.load_game()
-        if data['context'] != 'combat': return
-        
-        # Logique simplifiée : 50% de chance de gagner
-        if random.random() > 0.5:
-            print("Victoire ! Le combat est terminé.")
-            data['context'] = 'mouvement'
-        else:
-            print("Défaite... GAME OVER.")
-            self.start() # Reset
-            return
-        
-        self.save_game(data['player_name'], data['context'], data['loot'], data['team'])
-
-    def flee(self):
-        data = self.load_game()
-        if data['context'] != 'combat': return
-        
-        print('Tentative de fuite...')
-        data['context'] = 'mouvement'
-        self.save_game(data['player_name'], data['context'], data['loot'], data['team'])
-        self.status()
+    def __repr__(self):
+        return f"PlayerTeam(W:{self.__nb_warriors}, H:{self.__nb_hunters}, Z:{self.__nb_wizards})"
