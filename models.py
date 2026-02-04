@@ -48,3 +48,12 @@ class Game:
 ')
         self.status()
 
+
+    def flee(self):
+        # Simule la fuite
+        print('Tentative de fuite...')
+        with open(self.history_file, 'a') as f:
+            f.write('Action: Flee
+')
+        self.status()
+
