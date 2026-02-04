@@ -57,3 +57,27 @@ class Game:
 ')
         self.status()
 
+
+import json
+
+class Game:
+    history_file = 'game_data.json'
+
+    def save_game(self, player_name, context, loot, team):
+        data = {
+            'player_name': player_name,
+            'context': context,
+            'loot': loot,
+            'team': team  # Exemple: {'warriors': 2, 'hunters': 1, 'wizards': 1}
+        }
+        with open(self.history_file, 'w') as f:
+            json.dump(data, f, indent=4)
+        print('Partie sauvegardée dans game_data.json')
+
+    def load_game(self):
+        try:
+            with open(self.history_file, 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return None
+
