@@ -60,3 +60,57 @@ class PlayerTeam(Team):
 
     def __repr__(self):
         return f"PlayerTeam(W:{self.__nb_warriors}, H:{self.__nb_hunters}, Z:{self.__nb_wizards})"
+
+class Game:
+    history_file = 'game_data.json'
+
+    def save_game(self, player_name, context, loot, team_counts):
+        data = {
+            'player_name': player_name,
+            'context': context,
+            'loot': loot,
+            'team': team_counts
+        }
+        with open(self.history_file, 'w') as f:
+            json.dump(data, f, indent=4)
+
+    def load_game(self):
+        try:
+            with open(self.history_file, 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return None
+
+    def status(self):
+        data = self.load_game()
+        if not data:
+            print("Aucune partie. Tapez start()")
+            return
+        # Utilisation de PlayerTeam pour l'affichage
+        team = PlayerTeam(data['team']['warriors'], data['team']['hunters'], data['team']['wizards'])
+        print(f"\n--- {data['player_name']} | Butin: {data['loot']} ---")
+        print(f"Équipe: {team}")
+        print(f"Dégâts totaux: {team.get_damage()} | Chance: {team.get_luck()}")
+        print(f"Contexte: {data['context']}")
+
+    def fight(self):
+        data = self.load_game()
+        if data['context'] != 'combat':
+            print("Rien à combattre ici.")
+            return
+
+        player_team = PlayerTeam(data['team']['warriors'], data['team']['hunters'], data['team']['wizards'])
+        # On crée un ennemi aléatoire pour le test
+        enemy_damage = random.randint(5, 15)
+        
+        print(f"Dégâts joueur: {player_team.get_damage()} VS Ennemi: {enemy_damage}")
+        
+        if player_team.get_damage() >= enemy_damage:
+            print("Victoire !")
+            data['context'] = 'mouvement'
+            data['loot'] += 20
+        else:
+            print("Défaite... GAME OVER.")
+            # Ici on pourrait reset la partie
+        
+        self.save_game(data['player_name'], data['context'], data['loot'], data['team'])
