@@ -19,3 +19,14 @@ class Game:
     def status(self):
         print(f'Statut actuel : {self.__game_status}')
 
+
+    def buy(self, unit_type):
+        prices = {'warrior': 10, 'hunter': 12, 'wizard': 15}
+        if unit_type in prices:
+            # Sauvegarde simulée dans history_file
+            with open(self.history_file, 'a') as f:
+                f.write(f'Achat: {unit_type}
+')
+            return True
+        return False
+
