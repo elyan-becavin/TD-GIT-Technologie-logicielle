@@ -114,3 +114,56 @@ class Game:
             # Ici on pourrait reset la partie
         
         self.save_game(data['player_name'], data['context'], data['loot'], data['team'])
+
+    def move(self):
+        data = self.load_game()
+        if data['context'] != 'mouvement':
+            print("Action impossible en combat.")
+            return
+
+        team = PlayerTeam(data['team']['warriors'], data['team']['hunters'], data['team']['wizards'])
+        chance = team.get_luck()
+        
+        # Calcul des probabilités de l'énoncé
+        p_loot = min(0.2, (chance / 5) / 100)
+        p_soldats = min(0.1, (chance / 10) / 100)
+        p_ennemi = min(0.2, (chance / 4) / 100)
+        
+        r = random.random()
+        if r < p_loot:
+            print("Butin trouvé !")
+            data['loot'] += 20
+        elif r < p_loot + p_soldats:
+            print("Soldats errants recrutés !")
+            data['team']['warriors'] += 1
+        elif r < p_loot + p_soldats + p_ennemi:
+            print("COMBAT ! Une équipe ennemie bloque le passage.")
+            data['context'] = 'combat'
+        else:
+            print("Vous avancez en lieu sûr.")
+
+        self.save_game(data['player_name'], data['context'], data['loot'], data['team'])
+
+    def flee(self):
+        data = self.load_game()
+        if data['context'] != 'combat':
+            print("Pas besoin de fuir.")
+            return
+
+        team = PlayerTeam(data['team']['warriors'], data['team']['hunters'], data['team']['wizards'])
+        flee_score = team.get_flee_value()
+        death_chance = 1 / flee_score if flee_score > 0 else 0.5
+        
+        # On vérifie la survie de chaque unité
+        survivors = {'warriors': 0, 'hunters': 0, 'wizards': 0}
+        for unit, count in data['team'].items():
+            for _ in range(count):
+                if random.random() > death_chance:
+                    survivors[unit] += 1
+                else:
+                    print(f"Un {unit} est mort durant la fuite...")
+
+        data['team'] = survivors
+        data['context'] = 'mouvement'
+        print("Vous avez réussi à vous enfuir.")
+        self.save_game(data['player_name'], data['context'], data['loot'], data['team'])
