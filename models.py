@@ -30,3 +30,12 @@ class Game:
             return True
         return False
 
+
+    def move(self):
+        # Simule le chargement et le calcul de mouvement
+        print('Personnage en mouvement...')
+        with open(self.history_file, 'a') as f:
+            f.write('Action: Move
+')
+        self.status()
+
